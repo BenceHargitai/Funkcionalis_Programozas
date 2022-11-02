@@ -51,3 +51,18 @@ doesUserExist _ [] = False
 doesUserExist s (x:xs)
     | s == fst x = True
     | otherwise = doesUserExist s xs
+
+
+-- !? 11. Gyakorlat
+
+dropSpaces :: String -> String
+dropSpaces s
+    | take 1 s == " " = drop 1 s
+    | otherwise = s
+
+trim :: String -> String
+trim "" = ""
+trim s 
+    | take 1 s == " " = trim (drop 1 s)
+    | take 1 (reverse s) == " " = trim (reverse (drop 1 (reverse s)))
+    | otherwise = s
