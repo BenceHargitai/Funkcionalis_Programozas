@@ -66,3 +66,22 @@ trim s
     | take 1 s == " " = trim (drop 1 s)
     | take 1 (reverse s) == " " = trim (reverse (drop 1 (reverse s)))
     | otherwise = s
+
+
+dropSpaces' :: String -> String
+dropSpaces' [] = []
+dropSpaces' x = dropWhile' (==' ') x
+
+monogram :: String -> String
+monogram s = unwords (map (\(x:_) -> x: "." ) (words s ))
+
+uniq :: Ord a => [a] -> [a]
+uniq [] = []
+uniq (x:xs) = x : uniq (filter (/= x) xs)
+
+uniq' :: Ord a => [a] -> [a]
+uniq' s = map head (group (sort s))
+
+repeated :: Ord a => [a] -> [a]
+repeated [] = []
+repeated (x:xs) = x : repeated (filter (== x) xs)
