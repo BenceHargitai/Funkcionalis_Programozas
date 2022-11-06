@@ -14,5 +14,6 @@ encodeCaesar s = map (\x ->
     else 
         '?'
 ) s 
+decodeCaesar :: 
 
 
