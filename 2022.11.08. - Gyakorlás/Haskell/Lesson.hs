@@ -116,3 +116,21 @@ iterate'' f x = x : iterate'' f (f x)
 fibonacci :: [Int]
 fibonacci = 0 : 1 : zipWith' (+) fibonacci (tail fibonacci)
 
+compress :: Eq a => [a] -> [(Int,a)]
+compress [] = []
+compress l = map(\x -> (length x, head x)) $ group l
+
+decompress :: Eq a => [(Int,a)] -> [a]
+decompress [] = []
+decompress l = concat $ map(\(x,y) -> replicate x y) l
+
+isComplement ::Eq a => [a] -> [a] -> Bool
+isComplement a [] = True
+isComplement [] b = True
+isComplement a b
+    | head a == head (reverse b) = isComplement (drop 1 a) $ reverse (drop 1 $ reverse b) 
+    | otherwise = False
+
+deletions :: [a] -> [[a]]
+deletions [] = []
+deletions l = map(\x -> take x l ++ drop (x+1) l) [0..length l-1]
