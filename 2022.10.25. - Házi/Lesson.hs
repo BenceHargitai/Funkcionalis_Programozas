@@ -14,8 +14,8 @@ runs n [] = []
 runs n l = take n l : runs n (drop n l)
 
 fromTo :: Int -> Int -> [a] -> [a]
-fromTo _ _ [] = []
-fromTo 0 0 (x:xs) = []
-fromTo 0 n (x:xs) = x : fromTo 0 (n-1) xs
-fromTo m n (x:xs) = fromTo (m - 1) (n - 1) xs
+fromTo n m l 
+    | n>=0 = take (m - n) (drop n l)
+    | otherwise = fromTo (n+1) (m) (l)
+
 
