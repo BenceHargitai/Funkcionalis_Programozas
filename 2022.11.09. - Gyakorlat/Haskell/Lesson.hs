@@ -55,3 +55,4 @@ timeToUSTime (T h m)
     | h == 12 = (PM 12 m)
     | h > 0 && h < 12 = (AM h m)
     | otherwise = (PM (h-12) m)
+
