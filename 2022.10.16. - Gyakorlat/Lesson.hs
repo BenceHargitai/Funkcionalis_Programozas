@@ -82,7 +82,11 @@ getNth l n = getNth (tail l) (n-1)
 
 
 
-
+isLongerThanSecond :: [a] -> [b] -> Bool
+isLongerThanSecond [] l = False
+isLongerThanSecond [] [] = False
+isLongerThanSecond l [] = True
+isLongerThanSecond (x:xs) (y:ys) = isLongerThanSecond xs ys
 
 
 

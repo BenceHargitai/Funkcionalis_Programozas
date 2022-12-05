@@ -12,8 +12,16 @@ db :: DB
 db = [("dumbledore","abracadabra",Unprivileged), ("root", "secret", Admin), ("bela", "korte", Unprivileged)]
 
 register :: String -> String -> Cookie -> DB -> DB
-register username password (LoggedIn _ Admin) l = (username, password, Unprivileged) : db
+register user p (LoggedIn s Admin) l 
+    | user `elem` map (\(a,_,_) -> a) l = l
+    | otherwise = (user,p,Unprivileged):l
 register _ _ _ l = l
+
+
+-- register username password (LoggedIn _ Admin) l = (username, password, Unprivileged) : db
+-- register _ _ _ l = l
+
+
 
 -- data Maybe a = Just a | Nothing
 
