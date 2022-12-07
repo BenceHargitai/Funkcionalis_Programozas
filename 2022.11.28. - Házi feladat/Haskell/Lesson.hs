@@ -43,7 +43,7 @@ tryPurchase :: GameModel -> Coordinate -> Plant -> Maybe GameModel
 tryPurchase (GameModel sun plants zombies) (x,y) plant
     | getPlantCost plant > sun = Nothing
     | (x,y) `elem` (map fst plants) = Nothing
-    | x >= 5 || y >= 12 = Nothing
+    | x >= 5 || y >= 12 || x < 0 || y < 0 = Nothing
     | otherwise = Just (GameModel (sun - getPlantCost plant) (((x,y),plant):plants) zombies)
 
 getPlantCost :: Plant -> Int
@@ -59,8 +59,8 @@ placeZombieInLane (GameModel sun plants zombies) zombie lane
 
 
 performZombieActions :: GameModel -> Maybe GameModel
+performZombieActions (GameModel sun plants []) = Just (GameModel sun plants [])
 performZombieActions (GameModel sun plants l@(((x,y),zombie):zombies))
-    | l == [] = Just (GameModel sun plants [])
     | y == 0 = Nothing
     | Vaulting a 2 <- zombie = Just (GameModel sun plants (((x,(changeY y 2)),Vaulting a 1):zombies))
     | plantHere x y plants = Just (GameModel sun (hitPlant x y plants) (((x,y),zombie):zombies))
@@ -90,10 +90,10 @@ cleanBoard (GameModel sun plants zombies) = GameModel sun (removePlant plants) (
 removePlant :: [(Coordinate, Plant)] -> [(Coordinate, Plant)]
 removePlant [] = []
 removePlant ((coord, plant):plants)
-    | Peashooter 0 <- plant = removePlant plants
-    | Sunflower 0 <- plant = removePlant plants
-    | Walnut 0 <- plant = removePlant plants
-    | CherryBomb 0 <- plant = removePlant plants
+    | Peashooter health <- plant, health <= 0 = removePlant plants
+    | Sunflower health <- plant, health <= 0 = removePlant plants
+    | Walnut health <- plant, health <= 0 = removePlant plants
+    | CherryBomb health <- plant, health <= 0 = removePlant plants
     | otherwise = ((coord, plant):removePlant plants)
 
 
@@ -107,27 +107,54 @@ removeZombie ((coord, zombie):zombies)
     | otherwise = ((coord, zombie):removeZombie zombies)
 
 performPlantActions :: GameModel -> GameModel
-performPlantActions (GameModel sun (((x,y),plant):plants) zombies)
-    | Peashooter _ <- plant = GameModel sun (((x,y),plant):plants) (shootPea x y zombies)
-    | Sunflower _ <- plant = GameModel (sun+25) (((x,y),plant):plants) zombies
-    | CherryBomb _ <- plant = GameModel sun plants (explode x y zombies)
-    | otherwise = GameModel sun (((x,y),plant):plants) zombies
+performPlantActions (GameModel sun plants zombies) = (GameModel (sun + length (filter (\((x,y), plant) -> isSunflower plant) plants) * 25) (cherryBombs plants) (zombieMapAlakitas plants zombies))
 
-shootPea :: Int -> Int -> [(Coordinate, Zombie)] -> [(Coordinate, Zombie)]
-shootPea x y zombies = map (\(coord, zombie) -> if coord == (x,y-1) then (coord, hitZombie zombie) else (coord, zombie)) zombies
+isSunflower :: Plant -> Bool
+isSunflower (Sunflower _) = True
+isSunflower _ = False
+
+cherryBombs :: [(Coordinate, Plant)] -> [(Coordinate, Plant)]
+cherryBombs [] = []
+cherryBombs ((coord, plant):plants)
+    | CherryBomb 0 <- plant = cherryBombs plants
+    | CherryBomb _ <- plant = ((coord, plant):cherryBombs plants)
+    | otherwise = ((coord, plant):cherryBombs plants)
+
+zombieMapAlakitas :: [(Coordinate, Plant)] -> [(Coordinate, Zombie)] -> [(Coordinate, Zombie)]
+zombieMapAlakitas [] zombies = zombies
+zombieMapAlakitas ((coord, plant):plants) zombies
+    | Peashooter _ <- plant = zombieMapAlakitas plants (peashooterAction coord zombies)
+    | CherryBomb _ <- plant = zombieMapAlakitas plants (cherryBombAction coord zombies)
+    | otherwise = zombieMapAlakitas plants zombies
+
+peashooterAction :: Coordinate -> [(Coordinate, Zombie)] -> [(Coordinate, Zombie)]
+peashooterAction (x,y) zombies = map (\(coord, zombie) -> if (fst coord == x) && (snd coord >= y) then (coord, hitZombie zombie) else (coord, zombie)) zombies
+
 
 hitZombie :: Zombie -> Zombie
-hitZombie (Basic health damage) = Basic (health-damage) damage
-hitZombie (Conehead health damage) = Conehead (health-damage) damage
-hitZombie (Buckethead health damage) = Buckethead (health-damage) damage
-hitZombie (Vaulting health damage) = Vaulting (health-damage) damage
+hitZombie (Basic health speed) = Basic (health-1) speed
+hitZombie (Conehead health speed) = Conehead (health-1) speed
+hitZombie (Buckethead health speed) = Buckethead (health-1) speed
+hitZombie (Vaulting health speed) = Vaulting (health-1) speed
 
-explode :: Int -> Int -> [(Coordinate, Zombie)] -> [(Coordinate, Zombie)]
-explode x y zombies = map (\(coord, zombie) -> if (x-1,y-1) == coord || (x,y-1) == coord || (x+1,y-1) == coord || (x-1,y) == coord || (x,y) == coord || (x+1,y) == coord || (x-1,y+1) == coord || (x,y+1) == coord || (x+1,y+1) == coord then (coord, hitZombie zombie) else (coord, zombie)) zombies
+cherryBombAction :: Coordinate -> [(Coordinate, Zombie)] -> [(Coordinate, Zombie)]
+cherryBombAction _ [] = []
+cherryBombAction (x,y) ((coord, zombie):zombies)
+    | x == fst coord, y == snd coord = ((coord, zombie):cherryBombAction (x,y) zombies)
+    | x == fst coord, y == snd coord - 1 = ((coord, zombie):cherryBombAction (x,y) zombies)
+    | x == fst coord, y == snd coord + 1 = ((coord, zombie):cherryBombAction (x,y) zombies)
+    | x == fst coord - 1, y == snd coord = ((coord, zombie):cherryBombAction (x,y) zombies)
+    | x == fst coord - 1, y == snd coord - 1 = ((coord, zombie):cherryBombAction (x,y) zombies)
+    | x == fst coord - 1, y == snd coord + 1 = ((coord, zombie):cherryBombAction (x,y) zombies)
+    | x == fst coord + 1, y == snd coord = ((coord, zombie):cherryBombAction (x,y) zombies)
+    | x == fst coord + 1, y == snd coord - 1 = ((coord, zombie):cherryBombAction (x,y) zombies)
+    | x == fst coord + 1, y == snd coord + 1 = ((coord, zombie):cherryBombAction (x,y) zombies)
+    | otherwise = ((coord, zombie):cherryBombAction (x,y) zombies)
+
+
 
 defendsAgainst :: GameModel -> [[(Int, Zombie)]] -> Bool
 defendsAgainst (GameModel sun plants zombies) zombieList = defendsAgainst' (GameModel sun plants zombies) zombieList 2
-
 
 defendsAgainst' :: GameModel -> [[(Int, Zombie)]] -> Int -> Bool
 defendsAgainst' _ [] _ = True
