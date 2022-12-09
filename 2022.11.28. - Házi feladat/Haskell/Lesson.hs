@@ -267,7 +267,7 @@ defendsAgainst' (GameModel sun plants zombies) loadZombies round
     --------------------------------         *cleanboard          --------------------------------
     | (round == 7) = defendsAgainst' (cleanBoard (GameModel sun plants zombies)) loadZombies 8
 
-    -------    *megnézzük, hogy üres-e mindkét zombi lista, ha igen akkor győztek   --------------
+    ----------  *megnézzük, hogy üres-e mindkét zombi lista, ha igen akkor True  -----------------
     | (round == 8) =
         if (loadZombies == [] && zombies == [])
             then True
@@ -291,14 +291,10 @@ removeHead [] = []
 removeHead (x:xs) = xs
 
 
+-- =============================================================================
+--                              defendsAgainstI
+-- =============================================================================
+
 defendsAgainstI :: (GameModel -> GameModel) -> GameModel -> [[(Int, Zombie)]] -> Bool
 defendsAgainstI f (GameModel sun plants zombies) loadZombies = defendsAgainst' (f (GameModel sun plants zombies)) loadZombies 2
 
-
-
-
--- =============================================================================
--- 
--- =============================================================================
--- | (round == 5) = defendsAgainst' (GameModel sun plants (zombies ++ (map (\(x, zombie) -> ((x,11), zombie)) zombie))) zombieList (round + 1)
--- placeZombieInLane :: GameModel -> Zombie -> Int -> Maybe GameModel
