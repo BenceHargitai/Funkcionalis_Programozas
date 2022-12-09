@@ -60,7 +60,6 @@ getPlantCost plant = snd (head (filter (\(x,y) -> x == plant) shoppingList))
 --                              placeZombieInLane
 -- =============================================================================
 
---Valamiért kiírja a két intet is nálam
 placeZombieInLane :: GameModel -> Zombie -> Int -> Maybe GameModel
 placeZombieInLane (GameModel sun plants zombies) zombie lane
     | lane >= 5 || lane < 0 = Nothing 
@@ -196,11 +195,6 @@ firstZombie :: Coordinate -> [(Coordinate, Zombie)] -> Coordinate
 firstZombie (x,y) zombies 
     | length (filter (\(coord, zombie) -> (fst coord == x) && (snd coord >= y)) zombies) == 0 = (-1,-1)
     | otherwise = fst (head (filter (\(coord, zombie) -> (fst coord == x) && (snd coord >= y)) zombies))
-
--- shootPea :: Coordinate -> [(Coordinate, Zombie)] -> [(Coordinate, Zombie)]
--- shootPea (x,y) zombies
---     | x == -1 &&  y == -1 = zombies
---     | otherwise = map (\(coord, zombie) -> if coord == (x,y) then (coord, hitZombie zombie) else (coord, zombie)) zombies
 
 shootPea :: Coordinate -> [(Coordinate, Zombie)] -> [(Coordinate, Zombie)]
 shootPea (-1,-1) zombies = zombies
