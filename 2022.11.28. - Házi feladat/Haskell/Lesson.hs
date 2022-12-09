@@ -232,8 +232,6 @@ defendsAgainst (GameModel sun plants zombies) zombieList = defendsAgainst' (Game
 
 defendsAgainst' :: GameModel -> [[(Int, Zombie)]] -> Int -> Bool
 defendsAgainst' (GameModel sun plants zombies) loadZombies round 
-    --------------------------------     *defendsAgainstI    --------------------------------
-    -- | (round == 1) = defendsAgainst' (defendsAgainstI (GameModel sun plants zombies) loadZombies) loadZombies 2
 
     --------------------------------     *Performplantactions    --------------------------------
     | (round == 2) = defendsAgainst' (performPlantActions (GameModel sun plants zombies)) loadZombies 3 
@@ -288,7 +286,29 @@ removeHead (x:xs) = xs
 -- =============================================================================
 --                              defendsAgainstI
 -- =============================================================================
-
 defendsAgainstI :: (GameModel -> GameModel) -> GameModel -> [[(Int, Zombie)]] -> Bool
-defendsAgainstI f (GameModel sun plants zombies) loadZombies = defendsAgainst' (f (GameModel sun plants zombies)) loadZombies 2
+defendsAgainstI manipulateFunc initialGameState loadZombies = defendsAgainstI' manipulateFunc initialGameState loadZombies 1
 
+defendsAgainstI' :: (GameModel -> GameModel) -> GameModel -> [[(Int, Zombie)]] -> Int -> Bool
+defendsAgainstI' manipulateFunc (GameModel sun plants zombies) loadZombies round
+    | (round == 1) = defendsAgainstI' manipulateFunc (manipulateFunc (GameModel sun plants zombies)) loadZombies 2
+    | (round == 2) = defendsAgainstI' manipulateFunc (performPlantActions (GameModel sun plants zombies)) loadZombies 3
+    | (round == 3) = defendsAgainstI' manipulateFunc (cleanBoard (GameModel sun plants zombies)) loadZombies 4
+    | (round == 4) = defendsAgainstI' manipulateFunc (fromMaybe (performZombieActions (GameModel sun plants zombies))) loadZombies 5
+    | (round == 5) = 
+        if (performZombieActions (GameModel sun plants zombies) == Nothing) 
+            then False 
+        else defendsAgainstI' manipulateFunc (GameModel sun plants zombies) loadZombies 6
+    | (round == 6) =
+        if (loadZombies == [])
+            then
+            defendsAgainstI' manipulateFunc (GameModel sun plants zombies) loadZombies 7
+        else
+            defendsAgainstI' manipulateFunc (GameModel sun plants (placeZombiesfromlist (head loadZombies) zombies)) (removeHead loadZombies) 7
+    | (round == 7) = defendsAgainstI' manipulateFunc (cleanBoard (GameModel sun plants zombies)) loadZombies 8
+    | (round == 8) =
+        if (loadZombies == [] && zombies == [])
+            then True
+        else
+            defendsAgainstI' manipulateFunc (GameModel sun plants zombies) loadZombies 9
+    | (round == 9) = defendsAgainstI' manipulateFunc (GameModel (sun+25) plants zombies) loadZombies 1
