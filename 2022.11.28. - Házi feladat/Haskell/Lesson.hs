@@ -91,7 +91,6 @@ hitPlantAt coord [] = []
 hitPlantAt coord ((coord2, plant):plants)
     | coord == coord2 = ((coord2, meleePlant plant):hitPlantAt coord plants)
     | otherwise = ((coord2, plant):hitPlantAt coord plants)
--- ((coord, meleePlant plant):plants)
 
 meleePlant :: Plant -> Plant
 meleePlant (Peashooter health) = Peashooter (health-1)
@@ -195,13 +194,22 @@ zombieThings ((coord, plant):plants) zombies
 
 firstZombie :: Coordinate -> [(Coordinate, Zombie)] -> Coordinate
 firstZombie (x,y) zombies 
-    | length (filter (\(coord, zombie) -> (fst coord == x) && (snd coord > y)) zombies) == 0 = (-1,-1)
-    | otherwise = fst (head (filter (\(coord, zombie) -> (fst coord == x) && (snd coord > y)) zombies))
+    | length (filter (\(coord, zombie) -> (fst coord == x) && (snd coord >= y)) zombies) == 0 = (-1,-1)
+    | otherwise = fst (head (filter (\(coord, zombie) -> (fst coord == x) && (snd coord >= y)) zombies))
+
+-- shootPea :: Coordinate -> [(Coordinate, Zombie)] -> [(Coordinate, Zombie)]
+-- shootPea (x,y) zombies
+--     | x == -1 &&  y == -1 = zombies
+--     | otherwise = map (\(coord, zombie) -> if coord == (x,y) then (coord, hitZombie zombie) else (coord, zombie)) zombies
 
 shootPea :: Coordinate -> [(Coordinate, Zombie)] -> [(Coordinate, Zombie)]
-shootPea (x,y) zombies
-    | x == -1 &&  y == -1 = zombies
-    | otherwise = map (\(coord, zombie) -> if coord == (x,y) then (coord, hitZombie zombie) else (coord, zombie)) zombies
+shootPea (-1,-1) zombies = zombies
+shootPea coord [] = []
+shootPea coord ((coord2, zombie):zombies)
+    | coord == coord2 = ((coord2, hitZombie zombie):shootPea coord zombies)
+    | otherwise = ((coord2, zombie):shootPea coord zombies)
+
+
 
 
 hitZombie :: Zombie -> Zombie
@@ -224,35 +232,67 @@ destroyZombie (Vaulting _ speed) = Vaulting 0 speed
 -- =============================================================================
 
 
-defendsAgainst :: GameModel -> [[(Int, Zombie)]] -> GameModel
+defendsAgainst :: GameModel -> [[(Int, Zombie)]] -> Bool
 defendsAgainst (GameModel sun plants zombies) zombieList = defendsAgainst' (GameModel sun plants zombies) zombieList 2
 
 
-defendsAgainst' :: GameModel -> [[(Int, Zombie)]] -> Int -> GameModel
-defendsAgainst' (GameModel sun plants zombies) loadZombies round
-    | performZombieActions (GameModel sun plants zombies) == Nothing = GameModel sun plants zombies
-    | (round == 2) = defendsAgainst' (performPlantActions (GameModel sun plants zombies)) loadZombies (round + 1)
-    | (round == 3) = defendsAgainst' (cleanBoard (GameModel sun plants zombies)) loadZombies (round + 1)
-    | (round == 4) = defendsAgainst' (fromMaybe (performZombieActions (GameModel sun plants zombies))) loadZombies (round + 1)
-    | (round == 5) = defendsAgainst' (GameModel sun plants (placeZombiesfromlist loadZombies zombies)) loadZombies (round + 1)
-    | (round == 6) = defendsAgainst' (cleanBoard (GameModel sun plants zombies)) loadZombies (round + 1)
-    | (round == 7) = defendsAgainst' (GameModel (sun+25) plants zombies) loadZombies 2
-    | (round == 8) = GameModel sun plants zombies
+defendsAgainst' :: GameModel -> [[(Int, Zombie)]] -> Int -> Bool
+defendsAgainst' (GameModel sun plants zombies) loadZombies round 
+    --------------------------------     *defendsAgainstI    --------------------------------
+    -- | (round == 1) = defendsAgainst' (defendsAgainstI (GameModel sun plants zombies) loadZombies) loadZombies 2
+
+    --------------------------------     *Performplantactions    --------------------------------
+    | (round == 2) = defendsAgainst' (performPlantActions (GameModel sun plants zombies)) loadZombies 3 
+
+    --------------------------------        *cleanboard          --------------------------------
+    | (round == 3) = defendsAgainst' (cleanBoard (GameModel sun plants zombies)) loadZombies 4 
+
+    --------------------------------     *PerformZombieActions   --------------------------------
+    | (round == 4) = defendsAgainst' (fromMaybe (performZombieActions (GameModel sun plants zombies))) loadZombies 5
+        
+     --------------------------------     *PerformZombieActions   --------------------------------
+    | (round == 5) = 
+        if (performZombieActions (GameModel sun plants zombies) == Nothing) 
+            then False 
+        else defendsAgainst' (GameModel sun plants zombies) loadZombies 6
+        
+    --------------------------------      *zombik feltöltése     --------------------------------
+    | (round == 6) =
+        if (loadZombies == [])
+            then
+            defendsAgainst' (GameModel sun plants zombies) loadZombies 7
+        else
+            defendsAgainst' (GameModel sun plants (placeZombiesfromlist (head loadZombies) zombies)) (removeHead loadZombies) 7 
+
+    --------------------------------         *cleanboard          --------------------------------
+    | (round == 7) = defendsAgainst' (cleanBoard (GameModel sun plants zombies)) loadZombies 8
+
+    -------    *megnézzük, hogy üres-e mindkét zombi lista, ha igen akkor győztek   --------------
+    | (round == 8) =
+        if (loadZombies == [] && zombies == [])
+            then True
+        else
+            defendsAgainst' (GameModel sun plants zombies) loadZombies 9
+            
+    --------------------------------       *nap növelése          --------------------------------
+    | (round == 9) = defendsAgainst' (GameModel (sun+25) plants zombies) loadZombies 2
 
 
 fromMaybe :: Maybe a -> a
 fromMaybe (Just x) = x
 
 
-placeZombiesfromlist :: [[(Int, Zombie)]] -> [(Coordinate, Zombie)] -> [(Coordinate, Zombie)]
-placeZombiesfromlist [] defaultZombies = defaultZombies
-placeZombiesfromlist (zombie:zombies) defaultZombies = placeZombiesfromlist zombies (defaultZombies ++ placeZombies zombie)
+placeZombiesfromlist :: [(Int, Zombie)] -> [(Coordinate, Zombie)] -> [(Coordinate, Zombie)]
+placeZombiesfromlist [] zombies = zombies
+placeZombiesfromlist (x:xs) defaultZombies = placeZombiesfromlist xs (defaultZombies ++ ((fst x, 11), snd x):[])
 
-placeZombies :: [(Int, Zombie)] -> [(Coordinate, Zombie)]
-placeZombies [] = []
-placeZombies ((lane, zombie):zombies) = ((lane, 11), zombie) : placeZombies zombies
+removeHead :: [[a]] -> [[a]]
+removeHead [] = []
+removeHead (x:xs) = xs
 
 
+defendsAgainstI :: (GameModel -> GameModel) -> GameModel -> [[(Int, Zombie)]] -> Bool
+defendsAgainstI f (GameModel sun plants zombies) loadZombies = defendsAgainst' (f (GameModel sun plants zombies)) loadZombies 2
 
 
 
